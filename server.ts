@@ -3,8 +3,16 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 async function startServer() {
+  if (!process.env.NVIDIA_NIM_API_KEY && !process.env.GEMINI_API_KEY) {
+    console.error("FATAL ERROR: Missing required API keys. Please provide NVIDIA_NIM_API_KEY or GEMINI_API_KEY in your .env file.");
+    process.exit(1);
+  }
+
   const app = express();
   const PORT = 3000;
 
@@ -18,18 +26,18 @@ async function startServer() {
       
       User request: "${query}"
       
-      If the user wants a new application built, output the complete foundational code as the 'solutionCode' in a single issue, with a description of what you built. IMPORTANT: You must include the word "Built" or "Build" in your 'summary' if you are generating new code.
+      If the user wants a new application built, output the complete foundational code as the 'solutionCode' in a single issue, with a description of what you built.
       If the user wants to audit or fix existing code, analyze the provided code and provide specific issues with line numbers and refactoring solutions.
       
       Output a strict JSON Judgment block.
-      JSON structure: { "issues": [{ "description": string, "severity": "low"|"medium"|"critical", "lineNumbers": number[], "solutionCode": string }], "performanceScore": number, "summary": string }
+      JSON structure: { "type": "build" | "fix", "issues": [{ "description": string, "severity": "low"|"medium"|"critical", "lineNumbers": number[], "solutionCode": string }], "performanceScore": number, "summary": string }
 
       Current Code context:
       ${code}
       `;
 
       // Use either the client-provided key or the environment variable
-      const nimKey = clientNimKey || process.env.NVIDIA_NIM_API_KEY || "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";
+      const nimKey = clientNimKey || process.env.NVIDIA_NIM_API_KEY;
       let nimSuccess = false;
       
       if (nimKey) {
@@ -84,7 +92,7 @@ async function startServer() {
         
         const ai = new GoogleGenAI({ apiKey: geminiKey });
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-pro',
+          model: 'gemini-1.5-pro',
           contents: prompt,
           config: {
             responseMimeType: 'application/json'
