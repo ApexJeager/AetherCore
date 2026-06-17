@@ -21,7 +21,7 @@ async function startServer() {
   // API Route for NIM (NVIDIA Inference Microservices) or fallback to Gemini
   app.post('/api/nim', async (req, res) => {
     try {
-      const { code, query, nimKey: clientNimKey } = req.body;
+      const { code, query, nimKey: clientNimKey, history = [] } = req.body;
       const prompt = `You are a sophisticated AI agent capable of BOTH building new applications from scratch AND auditing/fixing existing code. 
       
       User request: "${query}"
@@ -50,7 +50,10 @@ async function startServer() {
 
           const completion = await openai.chat.completions.create({
             model: "nvidia/nemotron-3-ultra-550b-a55b",
-            messages: [{ role: "user", content: prompt }],
+            messages: [
+              ...history.map((msg: any) => ({ role: msg.role, content: msg.content })),
+              { role: "user", content: prompt }
+            ],
             temperature: 0.2, // lowered from 1 for more deterministic JSON
             top_p: 0.95,
             max_tokens: 4096, // lowered from 16384 for faster JSON layout
@@ -93,7 +96,13 @@ async function startServer() {
         const ai = new GoogleGenAI({ apiKey: geminiKey });
         const response = await ai.models.generateContent({
           model: 'gemini-1.5-pro',
-          contents: prompt,
+          contents: [
+            ...history.map((msg: any) => ({
+              role: msg.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: msg.content }]
+            })),
+            { role: 'user', parts: [{ text: prompt }] }
+          ],
           config: {
             responseMimeType: 'application/json'
           }
