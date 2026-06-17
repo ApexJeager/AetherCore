@@ -7,7 +7,7 @@ import { cn } from '../../lib/utils';
 export const CommandInput = () => {
   const [query, setQuery] = useState('');
   const state = useStore((state) => state);
-  const { messages, addMessage } = useChatStore((state) => state);
+  const { messages, addMessage, setLatestSchema } = useChatStore((state) => state);
   const { codeString, setIsAnalyzing, setJudgment, isAnalyzing, nimApiKey } = state;
 
   const handleAnalyze = async (e: React.FormEvent) => {
@@ -37,6 +37,10 @@ export const CommandInput = () => {
       
       const data = await response.json();
       setJudgment(data);
+
+      if (data.structuralSchema) {
+        setLatestSchema(data.structuralSchema);
+      }
 
       // Add assistant summary to history
       if (data.summary) {

@@ -56,10 +56,28 @@ export type Message = {
   content: string;
 };
 
+export type SchemaNode = {
+  id: string;
+  label: string;
+  position: [number, number, number];
+};
+
+export type SchemaLink = {
+  source: [number, number, number];
+  target: [number, number, number];
+};
+
+export type StructuralSchema = {
+  nodes: SchemaNode[];
+  links: SchemaLink[];
+};
+
 interface ChatState {
   messages: Message[];
   addMessage: (message: Message) => void;
   clearMessages: () => void;
+  latestSchema: StructuralSchema;
+  setLatestSchema: (schema: StructuralSchema) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -68,4 +86,6 @@ export const useChatStore = create<ChatState>((set) => ({
     messages: [...state.messages, message]
   })),
   clearMessages: () => set({ messages: [] }),
+  latestSchema: { nodes: [], links: [] },
+  setLatestSchema: (latestSchema) => set({ latestSchema }),
 }));

@@ -1,27 +1,22 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Text, Line } from '@react-three/drei';
-import { useStore } from '../../lib/store';
+import { useStore, useChatStore, SchemaNode } from '../../lib/store';
 
-type Node = {
-  id: string;
-  label: string;
-  position: [number, number, number];
-};
-
-type Link = {
-  source: [number, number, number];
-  target: [number, number, number];
-};
-
-const BlueprintNode = ({ node, opacityRef }: { node: Node, opacityRef: React.MutableRefObject<number> }) => {
+const BlueprintNode = ({ node, opacityRef }: { node: SchemaNode, opacityRef: React.MutableRefObject<number> }) => {
   const meshRef = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const textMaterialRef = useRef<any>(null);
   const coreMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
+    if (groupRef.current) {
+      groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, node.position[0], 2 * delta);
+      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, node.position[1], 2 * delta);
+      groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, node.position[2], 2 * delta);
+    }
     if (meshRef.current) {
       meshRef.current.rotation.x = state.clock.elapsedTime * 0.5;
       meshRef.current.rotation.y = state.clock.elapsedTime * 0.5;
@@ -38,7 +33,7 @@ const BlueprintNode = ({ node, opacityRef }: { node: Node, opacityRef: React.Mut
   });
 
   return (
-    <group position={node.position}>
+    <group ref={groupRef}>
       <mesh ref={meshRef}>
         <boxGeometry args={[0.8, 0.8, 0.8]} />
         <meshBasicMaterial ref={materialRef} color="#00ff88" wireframe transparent opacity={0} />
@@ -66,12 +61,12 @@ const BlueprintNode = ({ node, opacityRef }: { node: Node, opacityRef: React.Mut
 
 export const Blueprint = () => {
   const { mode } = useStore();
+  const { latestSchema } = useChatStore();
   const groupRef = useRef<THREE.Group>(null);
-  const linesMaterialRef = useRef<THREE.LineDashedMaterial>(null);
   const targetOpacity = useRef(0);
   const currentOpacity = useRef(0);
 
-  const nodes: Node[] = [
+  const defaultNodes: SchemaNode[] = [
     { id: 'root', label: 'RootLayout', position: [0, 3, 0] },
     { id: 'page', label: 'App', position: [0, 1, 0] },
     { id: 'canvas', label: 'WebGLContext', position: [-2, -1, 0] },
@@ -81,7 +76,7 @@ export const Blueprint = () => {
     { id: 'store', label: 'ZustandStore', position: [0, -4, 0] },
   ];
 
-  const links: Link[] = [
+  const defaultLinks = [
     { source: [0, 3, 0], target: [0, 1, 0] },
     { source: [0, 1, 0], target: [-2, -1, 0] },
     { source: [0, 1, 0], target: [2, -1, 0] },
@@ -90,6 +85,9 @@ export const Blueprint = () => {
     { source: [-2, -3, 0], target: [0, -4, 0] },
     { source: [2, -3, 0], target: [0, -4, 0] },
   ];
+
+  const nodes = latestSchema.nodes.length > 0 ? latestSchema.nodes : defaultNodes;
+  const links = latestSchema.links.length > 0 ? latestSchema.links : defaultLinks;
 
   useFrame((state, delta) => {
     targetOpacity.current = mode === 'builder' ? 1 : 0;
@@ -108,17 +106,15 @@ export const Blueprint = () => {
     <group ref={groupRef}>
       {links.map((link, i) => (
         <Line
-          key={`link-${i}`}
-          points={[link.source, link.target]}
+          key={`link-${i}-${link.source.join(',')}-${link.target.join(',')}`}
+          points={[link.source as [number, number, number], link.target as [number, number, number]]}
           color="#00ff88"
           lineWidth={2}
           dashed={true}
           dashSize={0.2}
           gapSize={0.1}
           transparent
-        >
-          {/* Manually injecting a transparent material so we can adjust it per frame might not work seamlessly with <Line> right now if it controls its inner material fully, but let's try wrapping it with a group and we'll apply opacity on it if needed, or stick to default Line setup and manually manage. Actually we can do a line material manually. */}
-        </Line>
+        />
       ))}
       
       {nodes.map((node) => (

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Scene } from './components/canvas/Scene';
 import { CommandInput } from './components/ui/CommandInput';
 import { BentoCard } from './components/ui/BentoCard';
-import { useStore } from './lib/store';
+import { useStore, useChatStore } from './lib/store';
 import { ShieldAlert, ShieldCheck, Cpu, Code2, Layers, Copy, Check, Download, RefreshCw, Loader2, Settings, X, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Editor from 'react-simple-code-editor';
@@ -124,6 +124,7 @@ const ExportPdfButton = ({ judgment }: { judgment: any }) => {
 export default function App() {
   const state = useStore((state) => state);
   const { codeString, setCodeString, judgment, hasCriticalVulnerability, isAnalyzing, activeIssueIndex, setActiveIssueIndex, setIsAnalyzing, setJudgment, nimApiKey, setNimApiKey, mode } = state;
+  const { setLatestSchema } = useChatStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleReaudit = async () => {
@@ -142,6 +143,9 @@ export default function App() {
       
       const data = await response.json();
       setJudgment(data);
+      if (data.structuralSchema) {
+        setLatestSchema(data.structuralSchema);
+      }
     } catch (err) {
       console.error(err);
       setJudgment({
