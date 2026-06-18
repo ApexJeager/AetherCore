@@ -12,6 +12,7 @@ export type FixerJudgment = {
   performanceScore: number;
   summary: string;
   reasoningContent?: string;
+  latencyMs?: number;
 };
 
 interface AppState {

@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs/promises';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
@@ -17,6 +18,44 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  // Simple authentication middleware
+  const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const adminToken = process.env.AETHERCORE_ADMIN_TOKEN;
+    if (!adminToken) {
+      // If no token is configured, we deny access by default for security
+      return res.status(401).json({ error: 'AETHERCORE_ADMIN_TOKEN is not configured on the server.' });
+    }
+    if (req.headers['aethercore-admin-token'] !== adminToken) {
+      return res.status(403).json({ error: 'Unauthorized: Invalid admin token.' });
+    }
+    next();
+  };
+
+  // Secure file system writing endpoint
+  app.post('/api/fs/write', authenticate, async (req, res) => {
+    try {
+      const { filepath, content } = req.body;
+      if (!filepath || content === undefined) {
+        return res.status(400).json({ error: 'Missing filepath or content.' });
+      }
+
+      // Basic security check to prevent directory traversal
+      const resolvedPath = path.resolve(process.cwd(), filepath);
+      if (!resolvedPath.startsWith(process.cwd())) {
+        return res.status(403).json({ error: 'Access denied: Path outside of project root.' });
+      }
+
+      // Ensure directory exists
+      await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
+      await fs.writeFile(resolvedPath, content, 'utf8');
+
+      res.json({ success: true, path: filepath });
+    } catch (err: any) {
+      console.error("FS Write Error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   // API Route for NIM (NVIDIA Inference Microservices) or fallback to Gemini
   app.post('/api/nim', async (req, res) => {

@@ -15,6 +15,7 @@ export const CommandInput = () => {
     if (!query.trim() || isAnalyzing) return;
 
     setIsAnalyzing(true);
+    const startTime = Date.now();
 
     // Add user message to history
     addMessage({ role: 'user', content: query });
@@ -36,7 +37,8 @@ export const CommandInput = () => {
       }
       
       const data = await response.json();
-      setJudgment(data);
+      const latencyMs = Date.now() - startTime;
+      setJudgment({ ...data, latencyMs });
 
       if (data.structuralSchema) {
         setLatestSchema(data.structuralSchema);
