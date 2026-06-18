@@ -81,8 +81,12 @@ const ExportPdfButton = ({ judgment }: { judgment: any }) => {
       };
 
       addText("Agent Reasoning Engine - Audit Report", 18, true);
+      addText(`Generated on: ${new Date().toLocaleString()}`, 10);
       yPos += 5;
       addText(`Performance Score: ${judgment.performanceScore}%`, 14);
+      if (judgment.latencyMs) {
+        addText(`Latency: ${judgment.latencyMs}ms`, 14);
+      }
       addText(`Summary: ${judgment.summary}`, 12);
       yPos += 10;
       
@@ -130,6 +134,7 @@ export default function App() {
   const handleReaudit = async () => {
     if (isAnalyzing) return;
     setIsAnalyzing(true);
+    const startTime = Date.now();
     try {
       const response = await fetch('/api/nim', {
         method: 'POST',
@@ -142,7 +147,8 @@ export default function App() {
       }
       
       const data = await response.json();
-      setJudgment(data);
+      const latencyMs = Date.now() - startTime;
+      setJudgment({ ...data, latencyMs });
       if (data.structuralSchema) {
         setLatestSchema(data.structuralSchema);
       }
