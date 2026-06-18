@@ -22,7 +22,7 @@ async function startServer() {
   app.post('/api/nim', async (req, res) => {
     try {
       const { code, query, nimKey: clientNimKey, history = [] } = req.body;
-      const prompt = `You are a sophisticated AI agent capable of BOTH building new applications from scratch AND auditing/fixing existing code. 
+      const prompt = `You are AetherCore Reasoning Engine, a sophisticated AI agent capable of BOTH building new applications from scratch AND auditing/fixing existing code.
       
       User request: "${query}"
       
@@ -30,7 +30,21 @@ async function startServer() {
       If the user wants to audit or fix existing code, analyze the provided code and provide specific issues with line numbers and refactoring solutions.
       
       Output a strict JSON Judgment block.
-      JSON structure: { "type": "build" | "fix", "issues": [{ "description": string, "severity": "low"|"medium"|"critical", "lineNumbers": number[], "solutionCode": string }], "performanceScore": number, "summary": string }
+      In addition to the logic, provide a 'structuralSchema' representing the 3D architecture of the solution.
+
+      JSON structure:
+      {
+        "type": "build" | "fix",
+        "issues": [{ "description": string, "severity": "low"|"medium"|"critical", "lineNumbers": number[], "solutionCode": string }],
+        "performanceScore": number,
+        "summary": string,
+        "structuralSchema": {
+          "nodes": [{ "id": string, "label": string, "position": [number, number, number] }],
+          "links": [{ "source": [number, number, number], "target": [number, number, number] }]
+        }
+      }
+
+      The positions should be in 3D space ($x, y, z$) appropriate for a Three.js canvas.
 
       Current Code context:
       ${code}
