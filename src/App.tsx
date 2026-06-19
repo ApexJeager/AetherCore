@@ -5,10 +5,7 @@ import { BentoCard } from './components/ui/BentoCard';
 import { useStore, useChatStore } from './lib/store';
 import { ShieldAlert, ShieldCheck, Cpu, Code2, Layers, Copy, Check, Download, RefreshCw, Loader2, Settings, X, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import Editor from 'react-simple-code-editor';
-import Prism from 'prismjs';
-import 'prismjs/components/prism-typescript';
-import 'prismjs/themes/prism-tomorrow.css'; // Add a basic dark theme
+import { MonacoEditor } from './components/ui/MonacoEditor';
 import { jsPDF } from 'jspdf';
 
 const DownloadButton = ({ text, filename = 'solution.ts' }: { text: string, filename?: string }) => {
@@ -220,8 +217,8 @@ export default function App() {
             layout
             className={`h-full pointer-events-auto flex flex-col gap-6 ${mode === 'builder' ? 'col-span-3' : 'col-span-4'}`}
           >
-            <BentoCard className="flex-1 flex flex-col !p-0">
-              <div className="p-4 border-b border-glass-border bg-[#00000050] flex items-center justify-between">
+            <BentoCard className="flex-1 flex flex-col !p-0 overflow-hidden">
+              <div className="p-4 border-b border-glass-border bg-[#00000050] flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2 font-mono text-sm text-text-muted">
                   <Code2 size={16} /> source_target.ts
                 </div>
@@ -229,26 +226,11 @@ export default function App() {
                   <div className="text-xs text-accent-blue animate-pulse">INGESTING...</div>
                 )}
               </div>
-              <div 
-                className="flex-1 overflow-auto custom-scrollbar relative flex cursor-text"
-                onClick={(e) => {
-                  const textarea = e.currentTarget.querySelector('textarea');
-                  if (textarea) textarea.focus();
-                }}
-              >
-                <Editor
+              <div className="flex-1 min-h-0">
+                <MonacoEditor
                   value={codeString}
-                  onValueChange={(code) => setCodeString(code)}
-                  highlight={(code) => Prism.highlight(code, Prism.languages.typescript, 'typescript')}
-                  padding={16}
-                  className="w-full min-h-full"
-                  style={{
-                    fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
-                    fontSize: 14,
-                    backgroundColor: 'transparent',
-                    color: '#e2e8f0',
-                  }}
-                  textareaClassName="focus:outline-none w-full min-h-full"
+                  onChange={(code) => setCodeString(code)}
+                  language="typescript"
                 />
               </div>
             </BentoCard>
