@@ -1,7 +1,11 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs/promises';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { createServer as createViteServer } from 'vite';
+
+const execAsync = promisify(exec);
 import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
@@ -54,6 +58,53 @@ async function startServer() {
     } catch (err: any) {
       console.error("FS Write Error:", err);
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Secure file system reading endpoint
+  app.get('/api/fs/read', authenticate, async (req, res) => {
+    try {
+      const { filepath } = req.query;
+      if (!filepath || typeof filepath !== 'string') {
+        return res.status(400).json({ error: 'Missing or invalid filepath.' });
+      }
+
+      const resolvedPath = path.resolve(process.cwd(), filepath);
+      if (!resolvedPath.startsWith(process.cwd())) {
+        return res.status(403).json({ error: 'Access denied: Path outside of project root.' });
+      }
+
+      const content = await fs.readFile(resolvedPath, 'utf8');
+      res.json({ success: true, content });
+    } catch (err: any) {
+      console.error("FS Read Error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Secure file system execution endpoint
+  app.post('/api/fs/execute', authenticate, async (req, res) => {
+    try {
+      const { command } = req.body;
+      if (!command) {
+        return res.status(400).json({ error: 'Missing command.' });
+      }
+
+      // Execute command in the context of the project root
+      const { stdout, stderr } = await execAsync(command, { cwd: process.cwd() });
+
+      res.json({
+        success: true,
+        stdout: stdout.toString(),
+        stderr: stderr.toString()
+      });
+    } catch (err: any) {
+      console.error("FS Execute Error:", err);
+      res.status(500).json({
+        error: err.message,
+        stdout: err.stdout?.toString(),
+        stderr: err.stderr?.toString()
+      });
     }
   });
 
